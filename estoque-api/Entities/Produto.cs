@@ -6,5 +6,4 @@ public class Produto
     public string Codigo { get; set; } = default!;
     public string Descricao { get; set; } = default!;
     public int Saldo { get; set; }
-    public byte[] RowVersion { get; set; } = default!;
 }

@@ -12,8 +12,12 @@ public class EstoqueDbContext(DbContextOptions<EstoqueDbContext> opt) : DbContex
         b.Entity<Produto>(e =>
         {
             e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedOnAdd();
             e.HasIndex(x => x.Codigo).IsUnique();
-            e.Property(x => x.RowVersion).IsRowVersion();
+            e.Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .IsConcurrencyToken()
+                .ValueGeneratedOnAddOrUpdate(); 
         });
     }
 }

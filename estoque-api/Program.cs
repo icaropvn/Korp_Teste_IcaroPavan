@@ -2,6 +2,7 @@
 using estoque_api.Data;
 using Microsoft.EntityFrameworkCore;
 using estoque_api.Entities;
+using estoque_api.Dtos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,27 +32,81 @@ app.MapGet("/api/produtos", async (EstoqueDbContext db, string? q, int page = 1,
     return Results.Ok(new { items, total });
 });
 
-app.MapPost("/api/produtos", async (EstoqueDbContext db, Produto dto) =>
+app.MapPost("/api/produtos", async (EstoqueDbContext db, ProdutoCreateDto dto) =>
 {
-    db.Produto.Add(dto);
+    var produto = new Produto
+    {
+        Descricao = dto.Descricao,
+        Saldo = dto.Saldo,
+        Codigo = Guid.NewGuid().ToString("N")[..8]
+    };
+
+    db.Produto.Add(produto);
     await db.SaveChangesAsync();
-    return Results.Created($"/api/produtos/{dto.Id}", dto);
+    return Results.Created($"/api/produtos/{produto.Id}", dto);
 });
 
-app.MapPost("/api/estoque/baixas", async (EstoqueDbContext db, List<(int produtoId,int qtd)> itens) =>
+app.MapPost("/api/estoque/baixas", async (EstoqueDbContext db, List<BaixaDto> itens) =>
 {
+    if (itens is null || itens.Count == 0)
+        return Results.BadRequest(new { message = "Nenhum item enviado." });
+
+    var invalidos = itens.Where(i => i.Qtd <= 0).ToList();
+    if (invalidos.Count > 0)
+        return Results.BadRequest(new {
+            message = "Existem itens com quantidade inválida (<= 0)."
+        });
+
     using var tx = await db.Database.BeginTransactionAsync();
-    foreach (var (produtoId, qtd) in itens)
+
+    var results = new List<object>();
+    foreach (var (produtoId, qtd) in itens.Select(i => (i.ProdutoId, i.Qtd)))
     {
         var afetadas = await db.Database.ExecuteSqlRawAsync(
-            "UPDATE \"Produtos\" SET \"Saldo\" = \"Saldo\" - {0} WHERE \"Id\" = {1} AND \"Saldo\" >= {0}",
+            "UPDATE \"Produto\" SET \"Saldo\" = \"Saldo\" - {0} WHERE \"Id\" = {1} AND \"Saldo\" >= {0}",
             qtd, produtoId);
 
-        if(afetadas == 0)
-            return Results.Conflict(new { message = $"Saldo insuficiente para produto {produtoId}" });
+        if (afetadas == 1)
+        {
+            results.Add(new { produtoId, qtd, status = "ok" });
+            continue;
+        }
+
+        var existe = await db.Produto.AnyAsync(p => p.Id == produtoId);
+        if (!existe)
+        {
+            await tx.RollbackAsync();
+            return Results.NotFound(new {
+                message = "Produto não encontrado."
+            });
+        }
+
+        var saldoAtual = await db.Produto
+            .Where(p => p.Id == produtoId)
+            .Select(p => p.Saldo)
+            .FirstAsync();
+
+        if (saldoAtual < qtd)
+        {
+            await tx.RollbackAsync();
+            return Results.Conflict(new {
+                message = "Saldo insuficiente."
+            });
+        }
+
+        await tx.RollbackAsync();
+        return Results.Conflict(new {
+            message = "Conflito de concorrência ao atualizar o produto."
+        });
     }
+
     await tx.CommitAsync();
-    return Results.Ok(new { ok = true });
+    return Results.Ok(new {
+        ok = true,
+        updatedCount = results.Count,
+        results
+    });
 });
+
 
 app.Run();

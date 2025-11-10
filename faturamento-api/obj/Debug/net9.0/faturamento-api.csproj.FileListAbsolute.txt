@@ -132,3 +132,12 @@ D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\obj\Debug\net9.0\
 D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\obj\Debug\net9.0\faturamento-api.pdb
 D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\obj\Debug\net9.0\faturamento-api.genruntimeconfig.cache
 D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\obj\Debug\net9.0\ref\faturamento-api.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Configuration.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Configuration.Binder.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Diagnostics.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Http.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Http.Polly.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Microsoft.Extensions.Options.ConfigurationExtensions.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Polly.dll
+D:\Icaro\Pessoal\Temp\korp-projeto-nota-fiscal\faturamento-api\bin\Debug\net9.0\Polly.Extensions.Http.dll
