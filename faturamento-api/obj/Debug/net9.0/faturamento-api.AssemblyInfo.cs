@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("faturamento-api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2191bc3a83fdf44aa715f6b9185ab2e9b3e2f586")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1764d51b13da5953de9c216e00d3d88d41ddfcb4")]
 [assembly: System.Reflection.AssemblyProductAttribute("faturamento-api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("faturamento-api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

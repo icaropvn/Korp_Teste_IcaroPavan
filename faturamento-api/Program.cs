@@ -12,6 +12,7 @@ builder.Services.AddDbContext<FaturamentoDbContext>(opts =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.WebHost.UseUrls("http://localhost:5002");
 
 builder.Services.AddHttpClient("estoque", c => c.BaseAddress = new Uri(builder.Configuration["Services:Estoque"]!))
     .AddTransientHttpErrorPolicy(p => p.WaitAndRetryAsync(3, i => TimeSpan.FromMilliseconds(200*i)))
@@ -133,7 +134,7 @@ app.MapPost("/api/notas/{id:int}/impressao", async (
 
     var itens = n.Itens.Select(i => new { produtoId = i.ProdutoId, qtd = i.Quantidade });
     var client = http.CreateClient("estoque");
-    var resp = await client.PostAsJsonAsync("/api/estoque/baixas", itens);
+    var resp = await client.PostAsJsonAsync("/api/baixas", itens);
     if (!resp.IsSuccessStatusCode)
         return Results.StatusCode((int)resp.StatusCode);
 

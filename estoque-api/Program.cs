@@ -11,6 +11,7 @@ builder.Services.AddDbContext<EstoqueDbContext>(opts =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.WebHost.UseUrls("http://localhost:5001");
 
 var app = builder.Build();
 app.UseSwagger();
@@ -46,7 +47,7 @@ app.MapPost("/api/produtos", async (EstoqueDbContext db, ProdutoCreateDto dto) =
     return Results.Created($"/api/produtos/{produto.Id}", dto);
 });
 
-app.MapPost("/api/estoque/baixas", async (EstoqueDbContext db, List<BaixaDto> itens) =>
+app.MapPost("/api/baixas", async (EstoqueDbContext db, List<BaixaDto> itens) =>
 {
     if (itens is null || itens.Count == 0)
         return Results.BadRequest(new { message = "Nenhum item enviado." });
