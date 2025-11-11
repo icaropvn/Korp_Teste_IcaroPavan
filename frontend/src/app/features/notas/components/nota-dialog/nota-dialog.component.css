@@ -1,0 +1,102 @@
+:host {
+  display: block;
+  width: 720px;
+}
+
+:host ::ng-deep .mat-mdc-dialog-title,
+:host ::ng-deep .mdc-dialog__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  padding-bottom: 4px;
+}
+
+:host ::ng-deep .mat-mdc-dialog-content,
+:host ::ng-deep .mdc-dialog__content {
+  padding-top: 8px;
+  display: grid;
+  gap: 16px;
+}
+
+.items {
+  display: grid;
+  gap: 16px;
+}
+
+.item {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+
+.item .row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.w-100 {
+  width: 100%;
+}
+
+:host ::ng-deep mat-form-field {
+  width: 100%;
+}
+
+:host ::ng-deep .mdc-notched-outline {
+  border-color: #d9d9d9 !important;
+}
+:host ::ng-deep .mdc-text-field--focused .mdc-notched-outline__leading,
+:host ::ng-deep .mdc-text-field--focused .mdc-notched-outline__notch,
+:host ::ng-deep .mdc-text-field--focused .mdc-notched-outline__trailing {
+  border-color: #556eff !important;
+}
+
+.item-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.divider {
+  display: none;
+}
+
+.add-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+:host ::ng-deep .mat-mdc-dialog-actions,
+:host ::ng-deep .mdc-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+:host ::ng-deep .mat-mdc-unelevated-button.mdc-button--unelevated {
+  border-radius: 10px;
+}
+:host ::ng-deep .mat-mdc-outlined-button.mdc-button--outlined {
+  border-radius: 10px;
+}
+
+:host ::ng-deep input[matinput], 
+:host ::ng-deep input[matInput] {
+  font-size: 16px;
+}
+
+@media (max-width: 820px) {
+  :host {
+    width: 96vw;
+  }
+}
+
+@media (max-width: 720px) {
+  .item .row {
+    grid-template-columns: 1fr;
+  }
+}

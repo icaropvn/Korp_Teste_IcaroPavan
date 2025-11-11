@@ -31,6 +31,35 @@ app.MapPost("/api/notas", async (FaturamentoDbContext db, NotaCreateDto dto) => 
         new NotaReadDto(n.Id, n.Numero, n.Status, n.Itens.Select(x => new NotaItemReadDto(x.Id,x.ProdutoId,x.Quantidade,x.Preco)).ToList()));
 });
 
+app.MapGet("/api/notas", async (FaturamentoDbContext db, int page = 1, int size = 20, string? status = null) => {
+    if (page < 1) page = 1;
+    if (size < 1) size = 20;
+
+    var query = db.Nota
+        .AsNoTracking()
+        .Include(n => n.Itens)
+        .AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(status))
+        query = query.Where(n => n.Status == status);
+
+    var total = await query.CountAsync();
+
+    var items = await query
+        .OrderByDescending(n => n.Id)
+        .Skip((page - 1) * size)
+        .Take(size)
+        .Select(n => new NotaReadDto(
+            n.Id,
+            n.Numero,
+            n.Status,
+            n.Itens.Select(i => new NotaItemReadDto(i.Id, i.ProdutoId, i.Quantidade, i.Preco)).ToList()
+        ))
+        .ToListAsync();
+
+    return Results.Ok(new { items, total, page, size });
+});
+
 app.MapGet("/api/notas/{id:int}", async (FaturamentoDbContext db, int id) => {
     var n = await db.Nota.Include(x => x.Itens).FirstOrDefaultAsync(x => x.Id == id);
     

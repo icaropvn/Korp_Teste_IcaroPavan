@@ -23,6 +23,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+builder.WebHost.UseUrls("http://localhost:8080");
+
 var app = builder.Build();
 
 app.UseCors("gateway-cors");

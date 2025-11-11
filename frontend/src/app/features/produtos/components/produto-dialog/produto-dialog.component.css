@@ -1,0 +1,35 @@
+:host {
+  display: block;
+  /* Largura confortável e responsiva */
+  width: min(520px, 92vw);
+}
+
+mat-dialog-content {
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+input[matInput] {
+  font-size: 16px;
+}
+
+mat-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+@media (max-width: 420px) {
+  :host {
+    width: 95vw;
+  }
+  mat-dialog-content {
+    gap: 10px;
+  }
+}
