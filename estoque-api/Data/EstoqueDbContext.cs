@@ -13,11 +13,11 @@ public class EstoqueDbContext(DbContextOptions<EstoqueDbContext> opt) : DbContex
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).ValueGeneratedOnAdd();
+
             e.HasIndex(x => x.Codigo).IsUnique();
-            e.Property<uint>("xmin")
-                .HasColumnName("xmin")
-                .IsConcurrencyToken()
-                .ValueGeneratedOnAddOrUpdate(); 
+            e.Property(x => x.Codigo).IsRequired();
+            e.Property(x => x.Descricao).IsRequired();
+            e.Property(x => x.Saldo).IsRequired();
         });
     }
 }

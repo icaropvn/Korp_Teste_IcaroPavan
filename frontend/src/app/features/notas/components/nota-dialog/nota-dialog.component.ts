@@ -1,67 +1,59 @@
 import { Component, inject } from '@angular/core';
+import { FormArray, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { MatDialogRef } from '@angular/material/dialog';
+import { NotasApi } from '../../../../core/api/notas.api';
 import { CommonModule } from '@angular/common';
-import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-
-export interface NotaItemCreateDto {
-  produtoId: number;
-  quantidade: number;
-  preco: number;
-}
-
-export interface NotaCreateDto {
-  itens: NotaItemCreateDto[];
-}
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { NotaCreateDto } from '../../../../core/api/notas.api';
 
 @Component({
-  standalone: true,
   selector: 'app-nota-dialog',
   templateUrl: './nota-dialog.component.html',
-  styleUrls: ['./nota-dialog.component.css'],
   imports: [
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatButtonModule,
     MatFormFieldModule,
-    MatInputModule
-  ],
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule
+  ]
 })
+
 export class NotaDialogComponent {
   private fb = inject(FormBuilder);
-  private dialogRef = inject<MatDialogRef<NotaDialogComponent, NotaCreateDto | null>>(MatDialogRef);
+  private dialogRef = inject(MatDialogRef<NotaDialogComponent>);
+  private notasApi = inject(NotasApi);
+  salvando = false;
 
-  form = this.fb.group({
-    itens: this.fb.array<FormGroup>([
-      this.novoItemGroup()
-    ])
+  form: FormGroup = this.fb.group({
+    itens: this.fb.array([this.novoItem()])
   });
 
-  get itens(): FormArray<FormGroup> {
+  get itens(): FormArray {
     return this.form.get('itens') as FormArray<FormGroup>;
   }
 
-  novoItemGroup(): FormGroup {
-    return this.fb.group({
-      produtoId: new FormControl<number | null>(null, { nonNullable: false, validators: [Validators.required, Validators.min(1)] }),
-      quantidade: new FormControl<number>(1, { nonNullable: true, validators: [Validators.required, Validators.min(1)] }),
-      preco: new FormControl<number>(0, { nonNullable: true, validators: [Validators.required, Validators.min(0)] }),
-    });
+  get itensControls(): FormGroup[] {
+    return this.itens.controls as FormGroup[];
   }
 
   addItem(): void {
-    this.itens.push(this.novoItemGroup());
+    this.itens.push(this.novoItem());
   }
 
-  removeItem(index: number): void {
-    if (this.itens.length > 1) this.itens.removeAt(index);
+  removeItem(i: number): void {
+    if (this.itens.length > 1) {
+      this.itens.removeAt(i);
+    }
   }
 
   cancelar(): void {
-    this.dialogRef.close(null);
+    this.dialogRef.close(false);
   }
 
   salvar(): void {
@@ -69,15 +61,28 @@ export class NotaDialogComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const dto: NotaCreateDto = {
-      itens: this.itens.controls.map(g => ({
+
+    const dto = {
+      itens: this.itens.controls.map((g: any) => ({
         produtoId: Number(g.get('produtoId')?.value),
         quantidade: Number(g.get('quantidade')?.value),
-        preco: Number(g.get('preco')?.value),
+        preco: Number(g.get('preco')?.value ?? 0)
       }))
     };
-    this.dialogRef.close(dto);
+
+    this.notasApi.create(dto).subscribe({
+      next: () => this.dialogRef.close(true),
+      error: () => {
+        this.dialogRef.close(false);
+      }
+    });
+  }
+
+  private novoItem(): FormGroup {
+    return this.fb.group({
+      produtoId: [null, Validators.required],
+      quantidade: [1, [Validators.required, Validators.min(1)]],
+      preco: [0, [Validators.required, Validators.min(0)]],
+    });
   }
 }
-
-export type { NotaCreateDto as _NotaCreateDto };

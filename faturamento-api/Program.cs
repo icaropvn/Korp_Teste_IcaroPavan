@@ -1,6 +1,7 @@
 
 using faturamento_api.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Json;
 using faturamento_api.Entities;
 using faturamento_api.Dtos;
 using Polly;
@@ -23,12 +24,57 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.MapPost("/api/notas", async (FaturamentoDbContext db, NotaCreateDto dto) => {
-    var n = new Nota { Status = "Aberta", Itens = dto.Itens.Select(i => new NotaItem { ProdutoId=i.ProdutoId, Quantidade=i.Quantidade, Preco=i.Preco }).ToList() };
-    db.Nota.Add(n); await db.SaveChangesAsync();
-    
+static async Task<(bool ok, int[] faltando)> ValidarProdutosAsync(IHttpClientFactory httpFactory, IEnumerable<int> produtoIds)
+{
+    var ids = produtoIds.Distinct().ToArray();
+    if (ids.Length == 0)
+        return (true, Array.Empty<int>());
+
+    var client = httpFactory.CreateClient("estoque");
+
+    var query = string.Join(",", ids);
+    var resp = await client.GetAsync($"/api/produtos/existencias?ids={query}");
+
+    if (!resp.IsSuccessStatusCode)
+        return (false, ids);
+
+    var body = await resp.Content.ReadFromJsonAsync<ExistenciasDto>();
+    var faltando = body?.Faltando ?? Array.Empty<int>();
+
+    return (faltando.Length == 0, faltando);
+}
+
+app.MapPost("/api/notas", async (FaturamentoDbContext db, IHttpClientFactory http, NotaCreateDto dto) =>
+{
+    var invalidos = dto.Itens.Where(i => i.Quantidade <= 0 || i.Preco < 0).ToList();
+    if (invalidos.Count > 0)
+        return Results.BadRequest(new {
+            message = "Existem itens inválidos.",
+            errors = invalidos.Select(i => new {
+                i.ProdutoId, i.Quantidade, i.Preco,
+                code = i.Quantidade <= 0 ? "invalid_quantity" : "invalid_price"
+            })
+        });
+
+    var (ok, faltando) = await ValidarProdutosAsync(http, dto.Itens.Select(i => i.ProdutoId));
+    if (!ok)
+        return Results.BadRequest(new {
+            message = "Existem produtos inexistentes no Estoque.",
+            missingProductIds = faltando
+        });
+
+    var n = new Nota {
+        Status = "Aberta",
+        Itens = dto.Itens.Select(i => new NotaItem {
+            ProdutoId = i.ProdutoId, Quantidade = i.Quantidade, Preco = i.Preco
+        }).ToList()
+    };
+    db.Nota.Add(n);
+    await db.SaveChangesAsync();
+
     return Results.Created($"/api/notas/{n.Id}",
-        new NotaReadDto(n.Id, n.Numero, n.Status, n.Itens.Select(x => new NotaItemReadDto(x.Id,x.ProdutoId,x.Quantidade,x.Preco)).ToList()));
+        new NotaReadDto(n.Id, n.Numero, n.Status,
+            n.Itens.Select(x => new NotaItemReadDto(x.Id, x.ProdutoId, x.Quantidade, x.Preco)).ToList()));
 });
 
 app.MapGet("/api/notas", async (FaturamentoDbContext db, int page = 1, int size = 20, string? status = null) => {
@@ -67,7 +113,7 @@ app.MapGet("/api/notas/{id:int}", async (FaturamentoDbContext db, int id) => {
         Results.Ok(new NotaReadDto(n.Id, n.Numero, n.Status, n.Itens.Select(x => new NotaItemReadDto(x.Id,x.ProdutoId,x.Quantidade,x.Preco)).ToList()));
 });
 
-app.MapPut("/api/notas/{id:int}", async (FaturamentoDbContext db, int id, NotaUpdateDto dto) =>
+app.MapPut("/api/notas/{id:int}", async (FaturamentoDbContext db, int id, IHttpClientFactory http, NotaUpdateDto dto) =>
 {
     if (dto?.Itens is null || dto.Itens.Count == 0)
         return Results.BadRequest(new { message = "A nota deve ter ao menos um item." });
@@ -91,6 +137,13 @@ app.MapPut("/api/notas/{id:int}", async (FaturamentoDbContext db, int id, NotaUp
 
     if (!string.Equals(nota.Status, "Aberta", StringComparison.OrdinalIgnoreCase))
         return Results.Conflict(new { message = "A nota não pode ser alterada (status != Aberta)." });
+
+    (bool okProdutos, int[] faltando) = await ValidarProdutosAsync(http, dto.Itens.Select(i => i.ProdutoId));
+    if (!okProdutos)
+        return Results.BadRequest(new {
+            message = "Existem produtos inexistentes no Estoque.",
+            missingProductIds = faltando
+        });
 
     using var tx = await db.Database.BeginTransactionAsync();
 

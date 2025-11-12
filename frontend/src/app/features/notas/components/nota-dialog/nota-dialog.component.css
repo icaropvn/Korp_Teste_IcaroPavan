@@ -1,102 +1,178 @@
-:host {
-  display: block;
-  width: 720px;
+mat-dialog-content {
+  min-width: 700px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
-:host ::ng-deep .mat-mdc-dialog-title,
-:host ::ng-deep .mdc-dialog__title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin: 0;
-  padding-bottom: 4px;
-}
-
-:host ::ng-deep .mat-mdc-dialog-content,
-:host ::ng-deep .mdc-dialog__content {
-  padding-top: 8px;
-  display: grid;
-  gap: 16px;
-}
-
-.items {
-  display: grid;
-  gap: 16px;
-}
-
-.item {
-  border: 1px solid #ececec;
-  border-radius: 12px;
-  background: #fff;
-  padding: 12px;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
-}
-
-.item .row {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.w-100 {
-  width: 100%;
-}
-
-:host ::ng-deep mat-form-field {
-  width: 100%;
-}
-
-:host ::ng-deep .mdc-notched-outline {
-  border-color: #d9d9d9 !important;
-}
-:host ::ng-deep .mdc-text-field--focused .mdc-notched-outline__leading,
-:host ::ng-deep .mdc-text-field--focused .mdc-notched-outline__notch,
-:host ::ng-deep .mdc-text-field--focused .mdc-notched-outline__trailing {
-  border-color: #556eff !important;
-}
-
-.item-actions {
+.item-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.item-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.item-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.item-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  background-color: #1976d2;
+  color: white;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 14px;
   margin-top: 8px;
 }
 
-.divider {
-  display: none;
-}
-
-.add-row {
+.item-fields {
   display: flex;
-  justify-content: flex-start;
+  gap: 12px;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
 
-:host ::ng-deep .mat-mdc-dialog-actions,
-:host ::ng-deep .mdc-dialog__actions {
+.field-produto {
+  flex: 1 1 300px;
+  min-width: 250px;
+}
+
+.field-quantidade {
+  flex: 0 0 120px;
+}
+
+.field-preco {
+  flex: 0 0 150px;
+}
+
+.field-total {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 4px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+  background-color: #e3f2fd;
+  border-radius: 4px;
+  min-width: 120px;
 }
 
-:host ::ng-deep .mat-mdc-unelevated-button.mdc-button--unelevated {
-  border-radius: 10px;
-}
-:host ::ng-deep .mat-mdc-outlined-button.mdc-button--outlined {
-  border-radius: 10px;
+.field-total label {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
 }
 
-:host ::ng-deep input[matinput], 
-:host ::ng-deep input[matInput] {
+.field-total .total-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.produto-option {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.produto-codigo {
+  font-weight: 600;
+  color: #1976d2;
+  font-size: 13px;
+}
+
+.produto-descricao {
+  font-size: 14px;
+  color: #333;
+  margin: 2px 0;
+}
+
+.produto-saldo {
+  font-size: 12px;
+  color: #666;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+}
+
+.empty-state mat-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin: 8px 0 16px;
   font-size: 16px;
 }
 
-@media (max-width: 820px) {
-  :host {
-    width: 96vw;
-  }
+.total-geral {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px;
+  background-color: #e8f5e9;
+  border-radius: 8px;
+  font-size: 18px;
 }
 
-@media (max-width: 720px) {
-  .item .row {
-    grid-template-columns: 1fr;
+.total-geral .valor-total {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  mat-dialog-content {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .item-row {
+    flex-direction: column;
+  }
+
+  .item-fields {
+    width: 100%;
+  }
+
+  .field-produto,
+  .field-quantidade,
+  .field-preco {
+    flex: 1 1 100%;
+    width: 100%;
   }
 }
