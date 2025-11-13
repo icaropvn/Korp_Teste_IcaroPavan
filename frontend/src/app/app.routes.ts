@@ -10,12 +10,12 @@ export const routes: Routes = [
         .then(m => m.ProdutosPageComponent)
   },
 
-  // {
-  //   path: 'notas',
-  //   loadComponent: () =>
-  //     import('./features/notas/pages/notas-list/notas-list.component')
-  //       .then(m => m.NotasListComponent)
-  // },
+  {
+    path: 'notas',
+    loadComponent: () =>
+      import('./features/pages/notas-page/notas-page.component')
+        .then(m => m.NotasPageComponent)
+  },
 
   { path: '**', redirectTo: 'produtos' }
 ];

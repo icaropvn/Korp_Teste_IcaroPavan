@@ -1,0 +1,69 @@
+<mat-toolbar class="toolbar" color="primary">
+  <span class="title">Notas fiscais</span>
+  <span class="spacer"></span>
+
+  <div class="actions">
+    <mat-form-field appearance="outline" class="search">
+      <mat-label>Buscar</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input
+        matInput
+        (keyup)="applyFilter($event)"
+        placeholder="Digite para buscar"
+      />
+      <button
+        mat-icon-button
+        matSuffix
+        *ngIf="hasFilter"
+        (click)="clearFilter()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-form-field>
+
+    <button mat-flat-button color="accent" (click)="novaNota()">
+      Nova nota
+    </button>
+  </div>
+</mat-toolbar>
+
+<div class="content">
+  <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
+    <ng-container matColumnDef="numero">
+      <th mat-header-cell *matHeaderCellDef>Número</th>
+      <td mat-cell *matCellDef="let n">{{ n.numero }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>Status</th>
+      <td mat-cell *matCellDef="let n">{{ n.status }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="acoes">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let n" class="acoes-cell">
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="imprimirNota(n, $event)"
+          [disabled]="isFechada(n) || imprimindoId === n.id"
+        >
+          {{ imprimindoId === n.id ? 'Imprimindo...' : 'Imprimir' }}
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="cols"></tr>
+    <tr
+      mat-row
+      *matRowDef="let row; columns: cols"
+      class="data-row"
+      [ngClass]="{ 'closed-row': isFechada(row) }"
+      (click)="editarNota(row)"
+    ></tr>
+  </table>
+
+  <div class="empty" *ngIf="dataSource.data.length === 0 && !loading">
+    Nenhuma nota encontrada.
+  </div>
+</div>

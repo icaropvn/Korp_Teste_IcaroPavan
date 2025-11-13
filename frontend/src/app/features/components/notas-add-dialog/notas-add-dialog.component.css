@@ -1,0 +1,55 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 720px;
+  max-width: 900px;
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.field {
+  width: 100%;
+  padding-top: 20px;
+}
+
+.itens-table {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.acoes-cell {
+  text-align: right;
+}
+
+.empty {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #777;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 8px 24px 16px;
+}
+
+button[mat-flat-button] {
+  height: 40px;
+  line-height: 40px;
+  border-radius: 6px;
+  padding: 0 16px;
+}
+
+button[mat-stroked-button] {
+  height: 40px;
+  line-height: 40px;
+  border-radius: 6px;
+}
