@@ -1,0 +1,46 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.first-input {
+    padding-top: 20px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+button[mat-flat-button] {
+  height: 40px;
+  line-height: 40px;
+  border-radius: 6px;
+  padding: 0 16px;
+}
+
+button[mat-stroked-button] {
+  height: 40px;
+  line-height: 40px;
+  border-radius: 6px;
+}
+
+button.delete-button {
+  background-color: #ff5050 !important;
+  color: #ffffff !important;
+}
+
+button.delete-button:hover {
+  background-color: #d83232 !important;
+}
+
+.actions .spacer {
+  flex: 1;
+}

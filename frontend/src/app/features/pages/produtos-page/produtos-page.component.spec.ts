@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { NotaDialogComponent } from './nota-dialog.component';
+import { ProdutosPageComponent } from './produtos-page.component';
 
-describe('NotaDialogComponent', () => {
-  let component: NotaDialogComponent;
-  let fixture: ComponentFixture<NotaDialogComponent>;
+describe('ProdutosPageComponent', () => {
+  let component: ProdutosPageComponent;
+  let fixture: ComponentFixture<ProdutosPageComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [NotaDialogComponent]
+      imports: [ProdutosPageComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(NotaDialogComponent);
+    fixture = TestBed.createComponent(ProdutosPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

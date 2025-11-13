@@ -1,0 +1,45 @@
+<mat-toolbar class="toolbar" color="primary">
+    <span class="title">Produtos</span>
+    <span class="spacer"></span>
+
+    <div class="actions">
+        <mat-form-field appearance="outline" class="search">
+            <mat-label>Buscar</mat-label>
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput (keyup)="applyFilter($event)" placeholder="Digite para buscar" />
+            <button mat-icon-button matSuffix *ngIf="hasFilter" (click)="clearFilter()">
+                <mat-icon>close</mat-icon>
+            </button>
+        </mat-form-field>
+
+        <button mat-flat-button color="accent" (click)="novoProduto()">
+            Novo produto
+        </button>
+    </div>
+</mat-toolbar>
+
+<div class="content">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
+        <ng-container matColumnDef="codigo">
+            <th mat-header-cell *matHeaderCellDef>Código</th>
+            <td mat-cell *matCellDef="let p">{{ p.codigo }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="descricao">
+            <th mat-header-cell *matHeaderCellDef>Descrição</th>
+            <td mat-cell *matCellDef="let p">{{ p.descricao }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="saldo">
+            <th mat-header-cell *matHeaderCellDef>Saldo</th>
+            <td mat-cell *matCellDef="let p">{{ p.saldo }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="cols"></tr>
+        <tr mat-row *matRowDef="let row; columns: cols" (click)="editarProduto(row)" class="data-row"></tr>
+    </table>
+
+    <div class="empty" *ngIf="dataSource.data.length === 0">
+        Nenhum produto encontrado.
+    </div>
+</div>

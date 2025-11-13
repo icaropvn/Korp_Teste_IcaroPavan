@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>Editar produto</h2>
+
+<form
+  [formGroup]="form"
+  (ngSubmit)="onSave()"
+  mat-dialog-content
+  class="form"
+>
+  <mat-form-field appearance="outline" class="full-width first-input">
+    <mat-label>Descrição</mat-label>
+    <input matInput formControlName="descricao" />
+    <mat-error *ngIf="form.get('descricao')?.hasError('required')">
+      A descrição é obrigatória.
+    </mat-error>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Saldo</mat-label>
+    <input matInput type="number" formControlName="saldo" />
+    <mat-error *ngIf="form.get('saldo')?.hasError('required')">
+      O saldo é obrigatório.
+    </mat-error>
+    <mat-error *ngIf="form.get('saldo')?.hasError('min')">
+      O saldo não pode ser negativo.
+    </mat-error>
+  </mat-form-field>
+
+  <div mat-dialog-actions class="actions">
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="onCancel()"
+      [disabled]="loading"
+    >
+      Cancelar
+    </button>
+
+    <span class="spacer"></span>
+
+    <button
+      mat-stroked-button
+      class="delete-button"
+      color="warn"
+      type="button"
+      (click)="onDelete()"
+      [disabled]="loading"
+    >
+      Excluir
+    </button>
+
+    <button
+      mat-flat-button
+      color="accent"
+      type="submit"
+      [disabled]="form.invalid || loading"
+    >
+      {{ loading ? 'Salvando...' : 'Salvar' }}
+    </button>
+  </div>
+</form>

@@ -37,7 +37,7 @@ app.MapGet("/api/estoque/produtos", async (EstoqueDbContext db, string? q) =>
     return Results.Ok(new { produtos });
 });
 
-app.MapGet("/api/produtos/{id:int}", async (EstoqueDbContext db, int id) =>
+app.MapGet("/api/estoque/produtos/{id:int}", async (EstoqueDbContext db, int id) =>
 {
     var p = await db.Produto
         .Where(x => x.Id == id)
@@ -47,7 +47,7 @@ app.MapGet("/api/produtos/{id:int}", async (EstoqueDbContext db, int id) =>
     return p is null ? Results.NotFound() : Results.Ok(p);
 });
 
-app.MapPost("/api/produtos", async (EstoqueDbContext db, ProdutoCreateDto dto) =>
+app.MapPost("/api/estoque/produtos", async (EstoqueDbContext db, ProdutoCreateDto dto) =>
 {
     var ultimoCodigo = await db.Produto
         .OrderByDescending(p => p.Id)
@@ -83,7 +83,7 @@ app.MapPost("/api/produtos", async (EstoqueDbContext db, ProdutoCreateDto dto) =
     });
 });
 
-app.MapPut("/api/produtos/{id:int}", async (EstoqueDbContext db, int id, ProdutoUpdateDto dto) =>
+app.MapPut("/api/estoque/produtos/{id:int}", async (EstoqueDbContext db, int id, ProdutoUpdateDto dto) =>
 {
     var produto = await db.Produto.FirstOrDefaultAsync(p => p.Id == id);
     if (produto is null)
@@ -102,7 +102,7 @@ app.MapPut("/api/produtos/{id:int}", async (EstoqueDbContext db, int id, Produto
     });
 });
 
-app.MapDelete("/api/produtos/{id:int}", async (EstoqueDbContext db, int id) =>
+app.MapDelete("/api/estoque/produtos/{id:int}", async (EstoqueDbContext db, int id) =>
 {
     var produto = await db.Produto.FindAsync(id);
     if (produto is null)

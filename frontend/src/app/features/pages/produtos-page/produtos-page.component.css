@@ -1,0 +1,59 @@
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 80px 200px 0 200px;
+}
+
+.title { 
+    font-weight: 600;
+    font-size: 36px;
+}
+    
+.spacer {
+    flex: 1 1 auto;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 320px;
+}
+
+.search {
+    width: 250px;
+}
+
+button[mat-flat-button] {
+    padding: 20px 32px;
+    border-radius: 6px;
+}
+
+.content {
+    overflow: auto;
+    padding: 80px 200px 100px 200px;
+}
+
+table {
+    width: 100%;
+    border-radius: 12px;
+}
+
+th.mat-header-cell {
+    font-weight: 600;
+}
+
+tr.data-row {
+  cursor: pointer;
+}
+
+tr.data-row:hover td {
+  background-color: #e0e0e0 !important;
+}
+
+.empty {
+    padding: 24px;
+    text-align: center;
+    color: rgba(0,0,0,0.6);
+}
