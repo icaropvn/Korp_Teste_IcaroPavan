@@ -152,4 +152,31 @@ app.MapPost("/api/estoque/produtos/baixas", async (EstoqueDbContext db, List<Bai
     });
 });
 
+app.MapGet("/api/estoque/produtos/{id:int}/disponibilidade", async (EstoqueDbContext db, int id, int quantidade) =>
+{
+    var produto = await db.Produto.FirstOrDefaultAsync(p => p.Id == id);
+
+    if(produto is null)
+        return Results.NotFound(new { message = "Produto não encontrado." });
+
+    var suficiente = produto.Saldo >= quantidade;
+
+    if (!suficiente)
+        return Results.Conflict(new
+        {
+            id,
+            saldo = produto.Saldo,
+            requerido = quantidade,
+            suficiente = false
+        });
+
+    return Results.Ok(new
+    {
+        id,
+        saldo = produto.Saldo,
+        requerido = quantidade,
+        suficiente = true
+    });
+});
+
 app.Run();

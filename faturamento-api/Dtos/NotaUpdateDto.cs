@@ -1,3 +1,6 @@
 namespace faturamento_api.Dtos;
 
-public record NotaUpdateDto(List<NotaItemUpsertDto> Itens);
+public class NotaUpdateDto
+{
+    public List<ItemNotaUpdateDto> Itens { get; set; } = new();
+}

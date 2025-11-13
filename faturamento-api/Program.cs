@@ -1,10 +1,10 @@
-
 using faturamento_api.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Http.Json;
 using faturamento_api.Entities;
 using faturamento_api.Dtos;
 using Polly;
+using Polly.CircuitBreaker;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,223 +24,398 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-static async Task<(bool ok, int[] faltando)> ValidarProdutosAsync(IHttpClientFactory httpFactory, IEnumerable<int> produtoIds)
+app.MapGet("/api/faturamento/notas", async (FaturamentoDbContext db, string? q) =>
 {
-    var ids = produtoIds.Distinct().ToArray();
-    if (ids.Length == 0)
-        return (true, Array.Empty<int>());
-
-    var client = httpFactory.CreateClient("estoque");
-
-    var query = string.Join(",", ids);
-    var resp = await client.GetAsync($"/api/produtos/existencias?ids={query}");
-
-    if (!resp.IsSuccessStatusCode)
-        return (false, ids);
-
-    var body = await resp.Content.ReadFromJsonAsync<ExistenciasDto>();
-    var faltando = body?.Faltando ?? Array.Empty<int>();
-
-    return (faltando.Length == 0, faltando);
-}
-
-app.MapPost("/api/notas", async (FaturamentoDbContext db, IHttpClientFactory http, NotaCreateDto dto) =>
-{
-    var invalidos = dto.Itens.Where(i => i.Quantidade <= 0 || i.Preco < 0).ToList();
-    if (invalidos.Count > 0)
-        return Results.BadRequest(new {
-            message = "Existem itens inválidos.",
-            errors = invalidos.Select(i => new {
-                i.ProdutoId, i.Quantidade, i.Preco,
-                code = i.Quantidade <= 0 ? "invalid_quantity" : "invalid_price"
-            })
-        });
-
-    var (ok, faltando) = await ValidarProdutosAsync(http, dto.Itens.Select(i => i.ProdutoId));
-    if (!ok)
-        return Results.BadRequest(new {
-            message = "Existem produtos inexistentes no Estoque.",
-            missingProductIds = faltando
-        });
-
-    var n = new Nota {
-        Status = "Aberta",
-        Itens = dto.Itens.Select(i => new NotaItem {
-            ProdutoId = i.ProdutoId, Quantidade = i.Quantidade, Preco = i.Preco
-        }).ToList()
-    };
-    db.Nota.Add(n);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"/api/notas/{n.Id}",
-        new NotaReadDto(n.Id, n.Numero, n.Status,
-            n.Itens.Select(x => new NotaItemReadDto(x.Id, x.ProdutoId, x.Quantidade, x.Preco)).ToList()));
-});
-
-app.MapGet("/api/notas", async (FaturamentoDbContext db, int page = 1, int size = 20, string? status = null) => {
-    if (page < 1) page = 1;
-    if (size < 1) size = 20;
-
-    var query = db.Nota
-        .AsNoTracking()
+    var baseQ = db.Nota
         .Include(n => n.Itens)
         .AsQueryable();
 
-    if (!string.IsNullOrWhiteSpace(status))
-        query = query.Where(n => n.Status == status);
+    if (!string.IsNullOrWhiteSpace(q))
+    {
+        q = q.Trim().ToLower();
 
-    var total = await query.CountAsync();
+        baseQ = baseQ.Where(n =>
+            n.Status.ToLower().Contains(q) || n.Numero.ToString().Contains(q)
+        );
+    }
 
-    var items = await query
-        .OrderByDescending(n => n.Id)
-        .Skip((page - 1) * size)
-        .Take(size)
-        .Select(n => new NotaReadDto(
+    var notas = await baseQ
+        .OrderBy(n => n.Status)
+        .ThenBy(n => n.Numero)
+        .Select(n => new
+        {
             n.Id,
             n.Numero,
             n.Status,
-            n.Itens.Select(i => new NotaItemReadDto(i.Id, i.ProdutoId, i.Quantidade, i.Preco)).ToList()
-        ))
+            Itens = n.Itens.Select(i => new
+            {
+                i.Id,
+                i.ProdutoId,
+                i.Quantidade,
+                i.Preco
+            })
+        })
         .ToListAsync();
 
-    return Results.Ok(new { items, total, page, size });
+    return Results.Ok(new { notas });
 });
 
-app.MapGet("/api/notas/{id:int}", async (FaturamentoDbContext db, int id) => {
-    var n = await db.Nota.Include(x => x.Itens).FirstOrDefaultAsync(x => x.Id == id);
-    
-    return n is null ? Results.NotFound() :
-        Results.Ok(new NotaReadDto(n.Id, n.Numero, n.Status, n.Itens.Select(x => new NotaItemReadDto(x.Id,x.ProdutoId,x.Quantidade,x.Preco)).ToList()));
-});
-
-app.MapPut("/api/notas/{id:int}", async (FaturamentoDbContext db, int id, IHttpClientFactory http, NotaUpdateDto dto) =>
+app.MapGet("/api/faturamento/notas/{id:int}", async (FaturamentoDbContext db, int id) =>
 {
-    if (dto?.Itens is null || dto.Itens.Count == 0)
-        return Results.BadRequest(new { message = "A nota deve ter ao menos um item." });
-
-    var invalidos = dto.Itens.Where(i => i.Quantidade <= 0 || i.Preco < 0).ToList();
-    if (invalidos.Count > 0)
-        return Results.BadRequest(new {
-            message = "Existem itens inválidos.",
-            errors = invalidos.Select(i => new {
-                i.Id, i.ProdutoId, i.Quantidade, i.Preco,
-                code = i.Quantidade <= 0 ? "invalid_quantity" : "invalid_price"
-            })
-        });
-
     var nota = await db.Nota
         .Include(n => n.Itens)
         .FirstOrDefaultAsync(n => n.Id == id);
 
-    if (nota is null)
-        return Results.NotFound(new { message = "Nota não encontrada." });
+    if (nota == null)
+        return Results.NotFound();
 
-    if (!string.Equals(nota.Status, "Aberta", StringComparison.OrdinalIgnoreCase))
-        return Results.Conflict(new { message = "A nota não pode ser alterada (status != Aberta)." });
+    return Results.Ok(nota);
+});
 
-    (bool okProdutos, int[] faltando) = await ValidarProdutosAsync(http, dto.Itens.Select(i => i.ProdutoId));
-    if (!okProdutos)
-        return Results.BadRequest(new {
-            message = "Existem produtos inexistentes no Estoque.",
-            missingProductIds = faltando
-        });
+app.MapPost("/api/faturamento/notas", async (FaturamentoDbContext db, NotaCreateDto dto, IHttpClientFactory http) =>
+{
+    if (dto == null || dto.Itens == null || dto.Itens.Count == 0)
+        return Results.BadRequest(new { message = "A nota deve possuir ao menos um item." });
 
-    using var tx = await db.Database.BeginTransactionAsync();
-
-    var idsEnviadosExistentes = dto.Itens.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
-    var atuais = nota.Itens.ToList();
-    foreach (var existente in atuais)
+    for (int i = 0; i < dto.Itens.Count; i++)
     {
-        if (!idsEnviadosExistentes.Contains(existente.Id))
-        {
-            db.Remove(existente);
-        }
+        var it = dto.Itens[i];
+        if (it.Quantidade <= 0)
+            return Results.BadRequest(new { message = $"Item #{i + 1}: quantidade deve ser maior que 0." });
+        if (it.Preco < 0)
+            return Results.BadRequest(new { message = $"Item #{i + 1}: preço não pode ser negativo." });
     }
 
-    var atuaisPorId = nota.Itens.ToDictionary(i => i.Id, i => i);
+    var client = http.CreateClient("estoque");
 
-    foreach (var itemDto in dto.Itens)
+    foreach (var it in dto.Itens)
     {
-        if (itemDto.Id is int itemId && atuaisPorId.TryGetValue(itemId, out var existente))
+        HttpResponseMessage resp;
+
+        try
         {
-            existente.ProdutoId = itemDto.ProdutoId;
-            existente.Quantidade = itemDto.Quantidade;
-            existente.Preco = itemDto.Preco;
+            resp = await client.GetAsync(
+                $"/api/estoque/produtos/{it.ProdutoId}/disponibilidade?quantidade={it.Quantidade}");
         }
-        else
+        catch (BrokenCircuitException)
         {
-            nota.Itens.Add(new NotaItem
+            return Results.Problem(
+                title: "Serviço de estoque indisponível",
+                detail: "O serviço de estoque está temporariamente indisponível. Tente novamente em alguns instantes.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (HttpRequestException)
+        {
+            return Results.Problem(
+                title: "Serviço de estoque indisponível",
+                detail: "Não foi possível se comunicar com o serviço de estoque. Tente novamente em alguns instantes.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (TaskCanceledException)
+        {
+            return Results.Problem(
+                title: "Tempo de resposta excedido",
+                detail: "O serviço de estoque demorou para responder. Tente novamente mais tarde.",
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return Results.NotFound(new { message = $"Produto {it.ProdutoId} não encontrado no estoque." });
+        }
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            var body = await resp.Content.ReadAsStringAsync();
+            using var json = System.Text.Json.JsonDocument.Parse(body);
+            var root = json.RootElement;
+
+            int saldo = root.TryGetProperty("saldo", out var sd) ? sd.GetInt32() : -1;
+            int requerido = root.TryGetProperty("requerido", out var rq) ? rq.GetInt32() : it.Quantidade;
+
+            return Results.Conflict(new
             {
-                NotaId = nota.Id,
-                ProdutoId = itemDto.ProdutoId,
-                Quantidade = itemDto.Quantidade,
-                Preco = itemDto.Preco
+                message = $"Saldo insuficiente para o produto {it.ProdutoId}.",
+                saldo,
+                requerido
+            });
+        }
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            return Results.Problem(
+                title: "Erro ao consultar serviço de estoque",
+                detail: $"Falha ao consultar disponibilidade do produto {it.ProdutoId} (HTTP {(int)resp.StatusCode}).",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        using var stream = await resp.Content.ReadAsStreamAsync();
+        using var jsonOk = await System.Text.Json.JsonDocument.ParseAsync(stream);
+        var rootOk = jsonOk.RootElement;
+
+        bool suficiente = rootOk.TryGetProperty("suficiente", out var s) && s.GetBoolean();
+        int saldoOk = rootOk.TryGetProperty("saldo", out var sdOk) ? sdOk.GetInt32() : -1;
+        int requeridoOk = rootOk.TryGetProperty("requerido", out var rqOk) ? rqOk.GetInt32() : it.Quantidade;
+
+        if (!suficiente)
+        {
+            return Results.Conflict(new
+            {
+                message = $"Saldo insuficiente para o produto {it.ProdutoId}.",
+                produtoId = it.ProdutoId,
+                saldo = saldoOk,
+                requerido = requeridoOk
             });
         }
     }
 
-    try
+    var nota = new Nota
     {
-        await db.SaveChangesAsync();
-        await tx.CommitAsync();
-    }
-    catch (DbUpdateConcurrencyException)
-    {
-        await tx.RollbackAsync();
-        return Results.Conflict(new { message = "Conflito de concorrência ao atualizar a nota." });
-    }
+        Status = "Aberta",
+        Itens = dto.Itens.Select(i => new ItemNota
+        {
+            ProdutoId = i.ProdutoId,
+            Quantidade = i.Quantidade,
+            Preco = i.Preco
+        }).ToList()
+    };
 
-    var read = new NotaReadDto(
-        nota.Id,
-        nota.Numero,
-        nota.Status,
-        nota.Itens.Select(i => new NotaItemReadDto(i.Id, i.ProdutoId, i.Quantidade, i.Preco)).ToList()
-    );
-    return Results.Ok(read);
-});
-
-app.MapPost("/api/notas/{id:int}/impressao", async (
-    FaturamentoDbContext db, IHttpClientFactory http, HttpRequest req, int id) =>
-{
-    var n = await db.Nota.Include(x => x.Itens).FirstOrDefaultAsync(x => x.Id == id);
-    if (n is null) return Results.NotFound();
-    if (n.Status != "Aberta") return Results.Conflict(new { message = "Nota já fechada" });
-
-    var idemKey = req.Headers.TryGetValue("Idempotency-Key", out var k) ? k.ToString() : null;
-
-    if (idemKey is not null)
-    {
-        var existe = await db.ChaveIdempotencia.FirstOrDefaultAsync(x => x.Chave == idemKey && x.Rota == $"/api/notas/{id}/impressao");
-        if (existe is not null) return Results.StatusCode(existe.StatusHttp);
-    }
-
-    var itens = n.Itens.Select(i => new { produtoId = i.ProdutoId, qtd = i.Quantidade });
-    var client = http.CreateClient("estoque");
-    var resp = await client.PostAsJsonAsync("/api/baixas", itens);
-    if (!resp.IsSuccessStatusCode)
-        return Results.StatusCode((int)resp.StatusCode);
-
-    n.Status = "Fechada";
-    if (n.Numero is null)
-    {
-        var maxNumero = await db.Nota.MaxAsync(x => (long?)x.Numero) ?? 0;
-        n.Numero = maxNumero + 1;
-    }
+    db.Nota.Add(nota);
     await db.SaveChangesAsync();
 
-    if (idemKey is not null)
+    return Results.Created($"/api/faturamento/notas/{nota.Id}", new { nota.Id, nota.Status });
+});
+
+app.MapPut("/api/faturamento/notas/{id:int}", async (FaturamentoDbContext db, int id, NotaUpdateDto dto, IHttpClientFactory http) =>
+{
+    var nota = await db.Nota
+        .Include(n => n.Itens)
+        .FirstOrDefaultAsync(n => n.Id == id);
+
+    if (nota == null)
+        return Results.NotFound(new { message = "Nota não encontrada." });
+
+    if (!string.Equals(nota.Status, "Aberta", StringComparison.OrdinalIgnoreCase))
+        return Results.Conflict(new { message = "A nota não está aberta e não pode ser editada." });
+
+    if (dto == null || dto.Itens == null || dto.Itens.Count == 0)
+        return Results.BadRequest(new { message = "A nota deve possuir ao menos um item." });
+
+    for (int i = 0; i < dto.Itens.Count; i++)
     {
-        db.ChaveIdempotencia.Add(new IdempotencyKey
-        {
-            Chave = idemKey,
-            Rota = $"/api/notas/{id}/impressao",
-            StatusHttp = StatusCodes.Status200OK,
-            RespostaJson = "{}"
-        });
-        await db.SaveChangesAsync();
+        var it = dto.Itens[i];
+        if (it.Quantidade <= 0)
+            return Results.BadRequest(new { message = $"Item #{i + 1}: quantidade deve ser maior que 0." });
+        if (it.Preco < 0)
+            return Results.BadRequest(new { message = $"Item #{i + 1}: preço não pode ser negativo." });
     }
-    
-    return Results.Ok(new NotaFechamentoResponse(n.Id, n.Numero!.Value, n.Status));
+
+    var client = http.CreateClient("estoque");
+
+    foreach (var it in dto.Itens)
+    {
+        HttpResponseMessage resp;
+
+        try
+        {
+            resp = await client.GetAsync($"/api/estoque/produtos/{it.ProdutoId}/disponibilidade?quantidade={it.Quantidade}");
+        }
+        catch (BrokenCircuitException)
+        {
+            return Results.Problem(
+                title: "Serviço de estoque indisponível",
+                detail: "O serviço de estoque está temporariamente indisponível. Tente novamente em alguns instantes.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (HttpRequestException)
+        {
+            return Results.Problem(
+                title: "Serviço de estoque indisponível",
+                detail: "Não foi possível se comunicar com o serviço de estoque. Tente novamente em alguns instantes.",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+        catch (TaskCanceledException)
+        {
+            return Results.Problem(
+                title: "Tempo de resposta excedido",
+                detail: "O serviço de estoque demorou para responder. Tente novamente mais tarde.",
+                statusCode: StatusCodes.Status504GatewayTimeout);
+        }
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return Results.NotFound(new
+            {
+                message = $"Produto {it.ProdutoId} não encontrado no estoque."
+            });
+        }
+
+        if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            var body = await resp.Content.ReadAsStringAsync();
+            using var json = System.Text.Json.JsonDocument.Parse(body);
+            var root = json.RootElement;
+
+            int saldo = root.TryGetProperty("saldo", out var sd) ? sd.GetInt32() : -1;
+            int requerido = root.TryGetProperty("requerido", out var rq) ? rq.GetInt32() : it.Quantidade;
+
+            return Results.Conflict(new
+            {
+                message = $"Saldo insuficiente para o produto {it.ProdutoId}.",
+                saldo,
+                requerido
+            });
+        }
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            return Results.Problem(
+                title: "Erro ao consultar serviço de estoque",
+                detail: $"Falha ao consultar disponibilidade do produto {it.ProdutoId} (HTTP {(int)resp.StatusCode}).",
+                statusCode: StatusCodes.Status502BadGateway);
+        }
+
+        using var stream = await resp.Content.ReadAsStreamAsync();
+        using var jsonOk = await System.Text.Json.JsonDocument.ParseAsync(stream);
+        var rootOk = jsonOk.RootElement;
+
+        bool suficiente = rootOk.TryGetProperty("suficiente", out var s) && s.GetBoolean();
+        int saldoOk = rootOk.TryGetProperty("saldo", out var sdOk) ? sdOk.GetInt32() : -1;
+        int requeridoOk = rootOk.TryGetProperty("requerido", out var rqOk) ? rqOk.GetInt32() : it.Quantidade;
+
+        if (!suficiente)
+        {
+            return Results.Conflict(new
+            {
+                message = $"Saldo insuficiente para o produto {it.ProdutoId}.",
+                produtoId = it.ProdutoId,
+                saldo = saldoOk,
+                requerido = requeridoOk,
+                status = 409,
+                origem = "estoque"
+            });
+        }
+    }
+
+    db.ItemNota.RemoveRange(nota.Itens);
+    nota.Itens = dto.Itens.Select(i => new ItemNota
+    {
+        ProdutoId = i.ProdutoId,
+        Quantidade = i.Quantidade,
+        Preco = i.Preco,
+        NotaId = nota.Id
+    }).ToList();
+
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { nota.Id, nota.Status });
+});
+
+app.MapDelete("/api/faturamento/notas/{id:int}", async (FaturamentoDbContext db, int id) =>
+{
+    var nota = await db.Nota.FindAsync(id);
+    if (nota == null)
+        return Results.NotFound(new { message = "Nota não encontrada." });
+
+    if (!string.Equals(nota.Status, "Aberta", StringComparison.OrdinalIgnoreCase))
+        return Results.Conflict(new { message = "A nota já foi fechada e não pode ser removida." });
+
+    db.Nota.Remove(nota);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
+app.MapPost("/api/faturamento/notas/{id:int}/impressao", async (FaturamentoDbContext db, IHttpClientFactory http, int id) =>
+{
+    var nota = await db.Nota
+        .Include(n => n.Itens)
+        .FirstOrDefaultAsync(n => n.Id == id);
+
+    if (nota == null)
+        return Results.NotFound(new { message = "Nota não encontrada." });
+
+    if (!string.Equals(nota.Status, "Aberta", StringComparison.OrdinalIgnoreCase))
+        return Results.Conflict(new { message = "A nota já foi fechada e não pode ser impressa." });
+
+    if (nota.Itens == null || nota.Itens.Count == 0)
+        return Results.BadRequest(new { message = "A nota não possui itens para impressão." });
+
+    var client = http.CreateClient("estoque");
+
+    var payload = nota.Itens
+        .Select(i => new { ProdutoId = i.ProdutoId, Qtd = i.Quantidade })
+        .ToList();
+
+    HttpResponseMessage resp;
+    try
+    {
+        resp = await client.PostAsJsonAsync("/api/estoque/produtos/baixas", payload);
+    }
+    catch (BrokenCircuitException)
+    {
+        return Results.Problem(
+            title: "Serviço de estoque indisponível",
+            detail: "O serviço de estoque está temporariamente indisponível. Tente novamente em alguns instantes.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (HttpRequestException)
+    {
+        return Results.Problem(
+            title: "Serviço de estoque indisponível",
+            detail: "Não foi possível se comunicar com o serviço de estoque. Tente novamente em alguns instantes.",
+            statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (TaskCanceledException)
+    {
+        return Results.Problem(
+            title: "Tempo de resposta excedido",
+            detail: "O serviço de estoque demorou para responder. Tente novamente mais tarde.",
+            statusCode: StatusCodes.Status504GatewayTimeout);
+    }
+
+    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+    {
+        var body = await resp.Content.ReadAsStringAsync();
+        return Results.NotFound(string.IsNullOrWhiteSpace(body)
+            ? new { message = "Produto não encontrado no estoque." }
+            : System.Text.Json.JsonSerializer.Deserialize<object>(body));
+    }
+
+    if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+    {
+        var body = await resp.Content.ReadAsStringAsync();
+        return Results.Conflict(string.IsNullOrWhiteSpace(body)
+            ? new { message = "Saldo insuficiente para um ou mais produtos da nota." }
+            : System.Text.Json.JsonSerializer.Deserialize<object>(body));
+    }
+
+    if (resp.StatusCode == System.Net.HttpStatusCode.BadRequest)
+    {
+        var body = await resp.Content.ReadAsStringAsync();
+        return Results.BadRequest(string.IsNullOrWhiteSpace(body)
+            ? new { message = "Requisição inválida ao serviço de estoque." }
+            : System.Text.Json.JsonSerializer.Deserialize<object>(body));
+    }
+
+    if (!resp.IsSuccessStatusCode)
+    {
+        var body = await resp.Content.ReadAsStringAsync();
+        var conteudo = string.IsNullOrWhiteSpace(body)
+            ? "Falha ao baixar itens no estoque."
+            : body;
+
+        return Results.Problem(
+            title: "Erro ao processar baixa de estoque",
+            detail: conteudo,
+            statusCode: (int)resp.StatusCode
+        );
+    }
+
+    nota.Status = "Fechada";
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { nota.Id, nota.Status });
 });
 
 app.Run();

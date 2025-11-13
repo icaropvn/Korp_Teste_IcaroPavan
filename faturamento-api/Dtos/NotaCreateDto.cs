@@ -1,3 +1,6 @@
 namespace faturamento_api.Dtos;
 
-public record NotaCreateDto(List<NotaItemCreateDto> Itens);
+public class NotaCreateDto
+{
+    public List<ItemNotaCreateDto> Itens { get; set; } = new();
+}

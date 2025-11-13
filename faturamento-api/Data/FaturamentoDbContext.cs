@@ -6,8 +6,7 @@ namespace faturamento_api.Data;
 public class FaturamentoDbContext(DbContextOptions<FaturamentoDbContext> opt) : DbContext(opt)
 {
     public DbSet<Nota> Nota => Set<Nota>();
-    public DbSet<NotaItem> NotaItem => Set<NotaItem>();
-    public DbSet<IdempotencyKey> ChaveIdempotencia => Set<IdempotencyKey>();
+    public DbSet<ItemNota> ItemNota => Set<ItemNota>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -28,7 +27,7 @@ public class FaturamentoDbContext(DbContextOptions<FaturamentoDbContext> opt) : 
                 .OnDelete(DeleteBehavior.Cascade);;
         });
 
-        b.Entity<NotaItem>(e =>
+        b.Entity<ItemNota>(e =>
         {
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.NotaId, x.ProdutoId });
@@ -40,13 +39,6 @@ public class FaturamentoDbContext(DbContextOptions<FaturamentoDbContext> opt) : 
             e.Property(x => x.Preco).HasColumnType("numeric(18,2)").IsRequired();
             e.Property(x => x.Quantidade).IsRequired();
             e.ToTable(t => t.HasCheckConstraint("CK_NotaItem_Quantidade_Pos", "\"Quantidade\" > 0"));
-        });
-
-        b.Entity<IdempotencyKey>(e =>
-        {
-            e.HasIndex(x => new { x.Chave, x.Rota }).IsUnique();
-            e.Property(x => x.DataCriacao).HasDefaultValueSql("timezone('utc', now())");
-            e.HasIndex(x => x.DataCriacao);
         });
     }
 }

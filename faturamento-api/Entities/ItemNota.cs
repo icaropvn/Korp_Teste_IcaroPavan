@@ -1,6 +1,6 @@
 namespace faturamento_api.Entities;
 
-public class NotaItem
+public class ItemNota
 {
     public int Id { get; set; }
     public int NotaId { get; set; }
