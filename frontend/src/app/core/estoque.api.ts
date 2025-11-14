@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Produto {
   id: number;
@@ -17,7 +18,7 @@ export interface CriarProdutoDto {
 @Injectable({ providedIn: 'root' })  
 export class EstoqueApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5000/api/estoque/produtos';
+  private readonly baseUrl = `${environment.apiBase}/api/estoque/produtos`;
 
   listarProdutos(): Observable<Produto[]> {
     return this.http.get<{produtos: Produto[]}>(this.baseUrl).pipe(

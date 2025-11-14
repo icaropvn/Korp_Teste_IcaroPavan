@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface NotaItem {
   id: number;
@@ -33,7 +34,7 @@ export interface AtualizarNotaDto {
 @Injectable({ providedIn: 'root' })
 export class FaturamentoApi {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:5000/api/faturamento/notas';
+  private readonly baseUrl = `${environment.apiBase}/api/faturamento/notas`;
 
   listarNotas(q?: string): Observable<Nota[]> {
     const params: any = {};
